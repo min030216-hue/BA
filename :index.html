@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R 프로그래밍 코딩 퀴즈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #1a1f2e 0%, #252d40 100%);
+    border-bottom: 2px solid #4ade80;
+    padding: 24px 20px 18px;
+    text-align: center;
+  }
+  header h1 { font-size: 1.5rem; font-weight: 700; color: #4ade80; margin-bottom: 4px; }
+  header .subtitle { font-size: 0.85rem; color: #94a3b8; }
+  header .note { font-size: 0.78rem; color: #64748b; margin-top: 6px; }
+
+  .scoreboard {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 12px 20px;
+    background: #1a1f2e;
+    border-bottom: 1px solid #2d3748;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .score-item { text-align: center; font-size: 0.78rem; color: #64748b; }
+  .score-item span { display: block; font-size: 1.3rem; font-weight: 700; }
+  .score-item.correct span { color: #4ade80; }
+  .score-item.wrong span { color: #f87171; }
+  .score-item.remain span { color: #60a5fa; }
+  .score-item.pct span { color: #fbbf24; }
+
+  .progress-bar-wrap { height: 3px; background: #1e293b; }
+  .progress-bar { height: 3px; background: linear-gradient(90deg, #4ade80, #22d3ee); transition: width 0.4s ease; }
+
+  main { max-width: 900px; margin: 24px auto; padding: 0 16px 60px; }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 28px 0 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #4ade80;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #2d3748;
+  }
+
+  .quiz-card {
+    background: #1a1f2e;
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    border: 1.5px solid #2d3748;
+    transition: border-color 0.2s;
+  }
+  .quiz-card.answered-correct { border-color: #4ade80; background: #0f2318; }
+  .quiz-card.answered-wrong   { border-color: #f87171; background: #1f0f0f; }
+
+  .q-header {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .q-num {
+    min-width: 28px; height: 28px;
+    background: #4ade80; color: #0f1117;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; font-weight: 800;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .q-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #cbd5e1;
+  }
+
+  /* Code block */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 10px 0;
+    font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: #e6edf3;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .code-block .blank-slot {
+    display: inline-block;
+    background: #21262d;
+    border: 1.5px dashed #4ade80;
+    border-radius: 4px;
+    padding: 1px 10px;
+    color: #4ade80;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: text;
+  }
+
+  .answer-area {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .answer-input {
+    flex: 1;
+    padding: 8px 14px;
+    background: #0d1117;
+    border: 1.5px solid #30363d;
+    border-radius: 8px;
+    color: #4ade80;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.92rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .answer-input:focus { border-color: #4ade80; background: #0f1a12; }
+  .answer-input::placeholder { color: #3d4f3d; }
+  .answer-input:disabled { cursor: not-allowed; opacity: 0.5; }
+
+  .check-btn {
+    padding: 8px 18px;
+    background: #4ade80;
+    color: #0f1117;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .check-btn:hover { opacity: 0.85; }
+  .check-btn:active { transform: scale(0.97); }
+  .check-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .feedback {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct {
+    background: #0f2318;
+    border-left: 3px solid #4ade80;
+    color: #86efac;
+  }
+  .feedback.wrong {
+    background: #1f0f0f;
+    border-left: 3px solid #f87171;
+    color: #fca5a5;
+  }
+  .feedback .ans-label { font-weight: 700; font-family: 'Fira Code', monospace; }
+  .feedback .exp { margin-top: 5px; color: #94a3b8; font-size: 0.8rem; }
+
+  .result-banner {
+    display: none;
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #0f2318, #1a3a28);
+    border: 1.5px solid #4ade80;
+    border-radius: 14px;
+    margin-bottom: 24px;
+    color: #4ade80;
+  }
+  .result-banner.show { display: block; }
+  .result-banner h2 { font-size: 1.3rem; margin-bottom: 6px; }
+  .result-banner p { color: #86efac; font-size: 0.9rem; }
+
+  .actions {
+    text-align: center;
+    margin-top: 28px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn-secondary {
+    padding: 10px 24px;
+    background: transparent;
+    border: 1.5px solid #4ade80;
+    color: #4ade80;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn-secondary:hover { background: #4ade80; color: #0f1117; }
+  .btn-reset {
+    padding: 10px 24px;
+    background: transparent;
+    border: 1.5px solid #64748b;
+    color: #64748b;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn-reset:hover { background: #64748b; color: #0f1117; }
+
+  @media (max-width: 600px) {
+    .answer-area { flex-direction: column; align-items: stretch; }
+    .check-btn { width: 100%; }
+    .code-block { font-size: 0.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💻 R 프로그래밍 코딩 실전 30제</h1>
+  <div class="subtitle">비즈니스 애널리틱스 기말고사 대비</div>
+  <div class="note">※ 빈칸에 들어갈 함수명, 파라미터, 연산자 또는 기호를 정확히 입력하세요</div>
+</header>
+
+<div class="scoreboard">
+  <div class="score-item remain"><span id="s-total">30</span>문제</div>
+  <div class="score-item correct"><span id="s-correct">0</span>정답</div>
+  <div class="score-item wrong"><span id="s-wrong">0</span>오답</div>
+  <div class="score-item pct"><span id="s-score">0%</span>점수</div>
+</div>
+<div class="progress-bar-wrap">
+  <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+</div>
+
+<main>
+  <div class="result-banner" id="result-banner">
+    <h2 id="result-title"></h2>
+    <p id="result-msg"></p>
+  </div>
+  <div id="quiz-container"></div>
+  <div class="actions">
+    <button class="btn-secondary" onclick="showAllAnswers()">전체 정답 보기</button>
+    <button class="btn-reset" onclick="resetQuiz()">다시 풀기</button>
+  </div>
+</main>
+
+<script>
+const sections = [
+  { label: "영역 1 · 데이터 전처리 및 로지스틱 회귀분석", range: [0, 8] },
+  { label: "영역 2 · 클러스터링 (K-means & LCA)", range: [8, 13] },
+  { label: "영역 3 · 연관규칙분석 (Association Rules)", range: [13, 20] },
+  { label: "영역 4 · 의사결정나무 (Decision Tree)", range: [20, 25] },
+  { label: "영역 5 · 랜덤 포레스트 (Random Forest)", range: [25, 30] },
+];
+
+const quizData = [
+  // 영역 1
+  {
+    qtext: "데이터 <code>tt_DB</code>에서 종속변수 <code>Pclass</code>를 분류 모델이 인식할 수 있는 범주형 변수로 강제 변환한다.",
+    code: "tt_DB$Pclass <- [BLANK](tt_DB$Pclass)",
+    a: ["as.factor"],
+    display: "as.factor",
+    exp: "문자/숫자형 데이터를 분류분석의 종속변수로 인식시키기 위해 범주형으로 바꾸는 함수."
+  },
+  {
+    qtext: "난수 발생 시드를 1234로 고정하여 무작위 추출 결과의 재현성을 보장한다.",
+    code: "[BLANK](1234)",
+    a: ["set.seed"],
+    display: "set.seed",
+    exp: "무작위로 동작하는 모델링이나 인덱스 추출 과정에서 동일한 시드값을 부여해 재현성을 보장함."
+  },
+  {
+    qtext: "<code>caret</code> 패키지를 이용해 데이터의 70%를 훈련용(Train set)으로 무작위 추출하여 인덱스를 부여한다.",
+    code: "train_idx <- [BLANK](1:nrow(tt_DB), p = 0.70, list = FALSE)",
+    a: ["createDataPartition", "createdatapartition"],
+    display: "createDataPartition",
+    exp: "caret 패키지에 내장되어 있으며, 일정한 비율(p=)로 훈련용 인덱스 번호를 분할해주는 함수."
+  },
+  {
+    qtext: "추출한 <code>train_idx</code>를 활용하여 슬라이싱 기법으로 테스트(Test) 데이터를 생성한다.",
+    code: "tt_test <- tt_DB[ [BLANK] , ]",
+    a: ["-train_idx", "- train_idx"],
+    display: "-train_idx",
+    exp: "데이터프레임의 행 자리에 -(마이너스)를 붙여 train_idx를 제외한 나머지 데이터를 Test set으로 생성."
+  },
+  {
+    qtext: "<code>glm()</code> 함수로 로지스틱 회귀 모델을 생성할 때, 종속변수가 이분형이므로 오차의 분포를 '이항분포'로 설정한다.",
+    code: 'tt_model <- glm(Survived ~ ., data = tt_train, family = [BLANK](link="logit"))',
+    a: ["binomial"],
+    display: "binomial",
+    exp: "glm()에서 이분형 종속변수에 적합하도록 오차의 분포족을 이항분포로 설정하는 옵션."
+  },
+  {
+    qtext: "훈련된 모델을 테스트 셋에 적용하여 0~1 사이의 연속적인 확률값으로 예측 결과를 도출한다.",
+    code: 'pred <- predict(tt_model, tt_test, type = "[BLANK]")',
+    a: ["response"],
+    display: "response",
+    exp: "predict()로 값을 낼 때, 확률값(0~1)으로 출력하기 위해 지정하는 필수 타입 옵션."
+  },
+  {
+    qtext: "예측 확률값이 0.5 이상이면 \"Survived\", 미만이면 \"Not Survived\"로 변환하는 조건문 함수를 작성한다.",
+    code: 'pred_data <- [BLANK](pred >= 0.5, "Survived", "Not Survived")',
+    a: ["ifelse"],
+    display: "ifelse",
+    exp: "0.5 이상의 조건식을 만족하면 \"Survived\", 아니면 \"Not Survived\"를 할당하는 벡터화된 조건 함수."
+  },
+  {
+    qtext: "혼동행렬을 그릴 때, 모델이 예측해야 하는 '참값'을 \"Survived\" 범주로 명시한다.",
+    code: 'confusionMatrix(pred_data, actual_data, [BLANK] = "Survived")',
+    a: ["positive"],
+    display: "positive",
+    exp: "confusionMatrix()에서 \"무엇을 맞추는 것이 목적인지(참값)\" 지정해주는 파라미터."
+  },
+  // 영역 2
+  {
+    qtext: "군집 분석 전, 각 관측치에서 평균을 빼고 표준편차로 나누는 Z-scoring 정규화를 수행한다.",
+    code: "krei_k_norm <- [BLANK](krei_k, center = TRUE)",
+    a: ["scale"],
+    display: "scale",
+    exp: "군집분석 전 각 변수 단위 차이로 인한 왜곡을 방지하는 표준화(Z-scoring) 함수."
+  },
+  {
+    qtext: "정규화가 완료된 행렬(Matrix) 형태의 데이터를 데이터프레임 구조로 변환한다.",
+    code: "krei_k_norm <- [BLANK](krei_k_norm)",
+    a: ["as.data.frame"],
+    display: "as.data.frame",
+    exp: "scale 함수 실행 후 매트릭스 형태로 반환된 값을 후속 분석이 용이한 데이터프레임으로 변경."
+  },
+  {
+    qtext: "군집 수 변화에 따른 오차 제곱합(WSS) 그래프를 그려 꺾이는 지점(Elbow Point)을 확인하는 사용자 정의 함수를 실행한다.",
+    code: "[BLANK](krei_k_norm)",
+    a: ["WssPlot", "wssplot"],
+    display: "WssPlot",
+    exp: "반복문을 돌며 군집 내 거리 제곱합이 어떻게 줄어드는지 꺾임점을 파악하는 사용자 정의 함수."
+  },
+  {
+    qtext: "<code>factoextra</code> 패키지를 사용하여 K-means 분석과 결과 시각화를 객체에 한 번에 저장할 때 사용하는 함수는?",
+    code: 'clust_k_4 <- [BLANK](krei_k_norm, seed=1234, "kmeans", k=4)',
+    a: ["eclust"],
+    display: "eclust",
+    exp: "factoextra 패키지의 함수로 k-means 알고리즘 실행과 그래프 시각화를 동시에 처리함."
+  },
+  {
+    qtext: "위 <code>eclust</code> 함수 내부에서 적용할 구체적인 군집화 알고리즘의 이름을 문자형으로 전달하는 값은?",
+    code: 'clust_k_4 <- eclust(krei_k_norm, seed=1234, "[BLANK]", k=4)',
+    a: ["kmeans"],
+    display: "kmeans",
+    exp: "eclust 함수 내부에서 적용할 구체적인 군집화 알고리즘의 이름을 문자형으로 전달."
+  },
+  // 영역 3
+  {
+    qtext: "Sparse Matrix 구조인 <code>basket_wide</code>를 열(Column) 방향으로 일괄 변환하기 위해 <code>apply</code>에 전달하는 방향 인자 값은?",
+    code: "basket_logical <- apply(basket_wide, [BLANK], as.logical) %>% as.data.frame()",
+    a: ["2"],
+    display: "2",
+    exp: "apply 함수에서 방향을 지정. 1은 행 단위 계산, 2는 열 단위 연산을 뜻함."
+  },
+  {
+    qtext: "코드를 간결하게 넘겨받아 다음 함수로 전달하는 파이프라인 연산자는?",
+    code: "basket_logical <- apply(basket_wide, 2, as.logical) [BLANK] as.data.frame()",
+    a: ["%>%", "pipe", "파이프"],
+    display: "%>%",
+    exp: "dplyr 패키지의 파이프라인 연산자. 좌측 함수의 결과값을 우측 함수의 파라미터로 즉시 전달해 줌."
+  },
+  {
+    qtext: "<code>arules</code> 패키지가 인식할 수 있도록 데이터를 장바구니 전용 특수 데이터 타입으로 변환할 때 지정하는 클래스명은?",
+    code: 'basket <- as(basket_logical, "[BLANK]")',
+    a: ["transactions", "Transactions"],
+    display: "transactions",
+    exp: "arules 연관분석 전용의 논리형 행렬 기반 특수 장바구니 데이터 타입."
+  },
+  {
+    qtext: "가장 빈번하게 거래된 아이템 상위 30개를 막대 그래프 형태로 도식화하는 함수는?",
+    code: '[BLANK](basket, topN = 30, type = "absolute")',
+    a: ["itemFrequencyPlot", "itemfrequencyplot"],
+    display: "itemFrequencyPlot",
+    exp: "연관규칙을 뽑기 전 빈번하게 나타나는 핵심 아이템의 출현 빈도를 그래프로 시각화."
+  },
+  {
+    qtext: "빈발 집합 하위 조합 연산을 제거하는 장바구니 분석 알고리즘 함수명은?",
+    code: "basket_rules_3 <- [BLANK](basket, parameter = list(support = 0.002, confidence = 0.8))",
+    a: ["apriori"],
+    display: "apriori",
+    exp: "비빈발 부분집합의 연산을 제한하여 빠른 속도로 룰(Rule)을 탐색해 내는 핵심 함수."
+  },
+  {
+    qtext: "<code>apriori</code> 함수의 <code>parameter</code> 옵션에 지지도, 신뢰도 등 여러 인자를 하나로 묶어 전달하는 R 구조체는?",
+    code: "basket_rules_3 <- apriori(basket, parameter = [BLANK](support = 0.002, confidence = 0.8))",
+    a: ["list"],
+    display: "list",
+    exp: "apriori 함수 안의 parameter 옵션에 지지도, 신뢰도 등 여러 인자를 하나로 묶어 전달하는 방식."
+  },
+  {
+    qtext: "추출된 연관규칙을 사람이 읽을 수 있는 표 형태로 출력하는 함수는?",
+    code: "[BLANK](basket_rules_3[1:10])",
+    a: ["inspect"],
+    display: "inspect",
+    exp: "rules 객체를 파라미터로 받아, 추출된 연관 조건과 확률을 사람이 읽을 수 있는 표 형태로 출력함."
+  },
+  // 영역 4
+  {
+    qtext: "CART 알고리즘을 사용하여 범주형 종속변수(<code>DEF</code>)에 대한 Full Tree를 성장시키는 함수명은?",
+    code: 'credit_cart <- [BLANK](formula = DEF ~ . , data = credit_train , method = "class")',
+    a: ["rpart"],
+    display: "rpart",
+    exp: "의사결정나무 모델의 하나인 CART 알고리즘(무조건 2진 분할)을 사용하여 모형을 성장시킴."
+  },
+  {
+    qtext: "<code>rpart</code> 함수에서 종속변수가 범주형일 때 '분류 트리'를 적용하겠다는 의미로 <code>method</code>에 지정하는 값은?",
+    code: 'credit_cart <- rpart(formula = DEF ~ . , data = credit_train , method = "[BLANK]")',
+    a: ["class"],
+    display: "class",
+    exp: "rpart 함수의 method 옵션에 쓰이며 종속변수가 범주형일 때 '분류 트리'를 적용하겠다는 의미."
+  },
+  {
+    qtext: "<code>cptable</code> 내에서 교차검증오차(<code>xerror</code>)가 최소값을 가지는 행의 인덱스를 찾아 반환하는 함수는?",
+    code: 'cp_optimal <- credit_cart$cptable[[BLANK](credit_cart$cptable[,"xerror"]),"CP"]',
+    a: ["which.min"],
+    display: "which.min",
+    exp: "특정 벡터 열(여기서는 xerror열) 안에서 최소값이 존재하는 위치 인덱스(행)를 자동 추출."
+  },
+  {
+    qtext: "최적의 CP(Complexity Parameter) 값을 활용하여 트리 모형의 잔가지를 병합하고 과적합을 방지하는 함수는?",
+    code: "credit_cart_pruned <- [BLANK](credit_cart, cp = cp_optimal)",
+    a: ["prune"],
+    display: "prune",
+    exp: "과적합을 막기 위해 교차검증오차 기반의 최적 cp 값을 받아, 모델의 잔가지를 쳐주는 함수."
+  },
+  {
+    qtext: "노드별 범주의 순도(Purity)와 확률이 색상 및 텍스트 박스로 명확히 표시되는 트리 그래프를 도식화하는 함수는?",
+    code: "[BLANK](credit_cart_pruned, cex = 0.8)",
+    a: ["rpart.plot"],
+    display: "rpart.plot",
+    exp: "rpart.plot 패키지의 함수로 plot()보다 세련된 형태(비중 및 범주 순도 포함)의 의사결정나무 시각화."
+  },
+  // 영역 5
+  {
+    qtext: "전체 데이터프레임 내 변수들의 개수를 파악하여 열(Column)의 총 개수를 반환하는 함수는?",
+    code: "n_var <- [BLANK](credit) - 1",
+    a: ["ncol"],
+    display: "ncol",
+    exp: "모델식에 들어갈 변수 개수 조정을 위해, 대상 데이터프레임이 가진 열(Column)의 총 개수를 반환."
+  },
+  {
+    qtext: "랜덤 포레스트 모델링 시, 생성할 의사결정나무의 총 개수를 1000개로 지정하는 파라미터명은?",
+    code: "RF_credit <- randomForest(formula = DEF ~., data = credit_train, mtry = round(sqrt(n_var)), [BLANK] = 1000, importance = T, replace = T)",
+    a: ["ntree"],
+    display: "ntree",
+    exp: "랜덤 포레스트 내에서 생성하고 학습시킬 나무(Tree) 모델의 총 개수를 제어하는 파라미터."
+  },
+  {
+    qtext: "트리가 분기할 때마다 후보로 활용할 독립변수 개수를 전체 독립변수의 '제곱근'으로 지정하는 함수는?",
+    code: "mtry = round([BLANK](n_var))",
+    a: ["sqrt"],
+    display: "sqrt",
+    exp: "피처 스플릿(Feature split)에서 전체 독립변수의 '제곱근' 개수만큼 변수를 추출하게 해주는 수식 함수."
+  },
+  {
+    qtext: "모델이 의사결정을 할 때 각 변수의 기여도를 산출하게 만드는 변수 중요도 허용 옵션명은?",
+    code: "RF_credit <- randomForest(..., [BLANK] = T)",
+    a: ["importance"],
+    display: "importance",
+    exp: "모델이 의사결정을 할 때 각 변수의 순수도 증대/정확도 개선 기여도를 산출하게 만드는 옵션."
+  },
+  {
+    qtext: "<code>importance=TRUE</code>를 통해 저장된 변수 중요도를 차트로 그려내는 함수는?",
+    code: "[BLANK](RF_credit)",
+    a: ["varImpPlot", "varimpplot"],
+    display: "varImpPlot",
+    exp: "importance=TRUE를 통해 저장된 변수 중요도 평가를 차트로 그려내어 비즈니스 인사이트를 제공함."
+  }
+];
+
+let correctCount = 0, wrongCount = 0, answeredCount = 0;
+
+function normalize(s) { return s.trim().toLowerCase().replace(/\s+/g, ' '); }
+
+function buildQuiz() {
+  const container = document.getElementById('quiz-container');
+  container.innerHTML = '';
+
+  let sectionIdx = 0;
+  quizData.forEach((item, i) => {
+    // Section label
+    const sec = sections.find(s => s.range[0] === i);
+    if (sec) {
+      const lbl = document.createElement('div');
+      lbl.className = 'section-label';
+      lbl.textContent = sec.label;
+      container.appendChild(lbl);
+    }
+
+    const card = document.createElement('div');
+    card.className = 'quiz-card';
+    card.id = `card-${i}`;
+
+    const codeHtml = item.code.replace('[BLANK]', '<span class="blank-slot">( ' + (i+1) + ' )</span>');
+
+    card.innerHTML = `
+      <div class="q-header">
+        <div class="q-num">Q${i+1}</div>
+        <div class="q-text">${item.qtext}</div>
+      </div>
+      <div class="code-block">${codeHtml}</div>
+      <div class="answer-area">
+        <input type="text" class="answer-input" id="input-${i}"
+          placeholder="정답 입력..."
+          onkeydown="if(event.key==='Enter') checkAnswer(${i})">
+        <button class="check-btn" id="btn-${i}" onclick="checkAnswer(${i})">확인</button>
+      </div>
+      <div class="feedback" id="feedback-${i}"></div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function checkAnswer(i) {
+  const input = document.getElementById(`input-${i}`);
+  const btn   = document.getElementById(`btn-${i}`);
+  const card  = document.getElementById(`card-${i}`);
+  const fb    = document.getElementById(`feedback-${i}`);
+
+  if (btn.disabled) return;
+  const userAns = normalize(input.value);
+  if (!userAns) { input.focus(); return; }
+
+  const item = quizData[i];
+  const isCorrect = item.a.some(ans => normalize(ans) === userAns);
+
+  input.disabled = true;
+  btn.disabled = true;
+  answeredCount++;
+
+  if (isCorrect) {
+    correctCount++;
+    card.classList.add('answered-correct');
+    fb.className = 'feedback correct show';
+    fb.innerHTML = `✅ 정답! <span class="ans-label">${item.display}</span><div class="exp">${item.exp}</div>`;
+  } else {
+    wrongCount++;
+    card.classList.add('answered-wrong');
+    fb.className = 'feedback wrong show';
+    fb.innerHTML = `❌ 오답. 정답: <span class="ans-label">${item.display}</span><div class="exp">${item.exp}</div>`;
+  }
+  updateScore();
+  if (answeredCount === quizData.length) showResult();
+}
+
+function updateScore() {
+  document.getElementById('s-correct').textContent = correctCount;
+  document.getElementById('s-wrong').textContent   = wrongCount;
+  const pct = answeredCount > 0 ? Math.round(correctCount / answeredCount * 100) : 0;
+  document.getElementById('s-score').textContent   = pct + '%';
+  document.getElementById('progress-bar').style.width = Math.round(answeredCount / quizData.length * 100) + '%';
+}
+
+function showResult() {
+  const banner = document.getElementById('result-banner');
+  const pct = Math.round(correctCount / quizData.length * 100);
+  const emoji = pct >= 90 ? '🏆' : pct >= 70 ? '🎉' : pct >= 50 ? '📚' : '💪';
+  document.getElementById('result-title').textContent = `${emoji} 완료! ${correctCount}/${quizData.length} 정답 (${pct}점)`;
+  const msgs = ['다시 한 번 도전해보세요! R 기본기를 복습해 보세요.', '절반 이상! 조금 더 코드 흐름을 익혀보세요.', '잘 하셨어요! 틀린 함수를 한 번 더 확인해 보세요.', '훌륭합니다! R 코딩 실력이 완벽합니다.'];
+  document.getElementById('result-msg').textContent = msgs[pct >= 90 ? 3 : pct >= 70 ? 2 : pct >= 50 ? 1 : 0];
+  banner.classList.add('show');
+  banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showAllAnswers() {
+  quizData.forEach((item, i) => {
+    const btn = document.getElementById(`btn-${i}`);
+    if (!btn.disabled) {
+      document.getElementById(`input-${i}`).disabled = true;
+      btn.disabled = true;
+      answeredCount++; wrongCount++;
+      document.getElementById(`card-${i}`).classList.add('answered-wrong');
+      const fb = document.getElementById(`feedback-${i}`);
+      fb.className = 'feedback wrong show';
+      fb.innerHTML = `📖 정답: <span class="ans-label">${item.display}</span><div class="exp">${item.exp}</div>`;
+    }
+  });
+  updateScore();
+  showResult();
+}
+
+function resetQuiz() {
+  correctCount = wrongCount = answeredCount = 0;
+  document.getElementById('result-banner').classList.remove('show');
+  ['s-correct','s-wrong','s-score'].forEach(id => document.getElementById(id).textContent = id === 's-score' ? '0%' : '0');
+  document.getElementById('progress-bar').style.width = '0%';
+  buildQuiz();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+buildQuiz();
+</script>
+</body>
+</html>
